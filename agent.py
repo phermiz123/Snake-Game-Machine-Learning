@@ -7,8 +7,9 @@ from keras import layers
 import keras.initializers as initializers
 from keras.optimizers import Adam
 
+
 def create_network():
-    inputs = layers.Input(shape=(11))
+    inputs = layers.Input(shape=(11,))
     hidden = layers.Dense(units=128, activation='relu')(inputs)
     q_layer = layers.Dense(units=3, activation='linear')(hidden)
 
@@ -61,6 +62,7 @@ def get_state(game):
 
     return np.array(state, dtype=int)
 
+
 def mean_squared_error_loss(q_value: tf.Tensor, reward: tf.Tensor) -> tf.Tensor:
     # Compute mean squared error loss
     loss = 0.5 * (q_value - reward) ** 2
@@ -75,7 +77,7 @@ def train():
     agent.summary()
     game = SnakeGameAI()
     learning_rate = 0.01
-    exploration_rate = 0.8
+    epsilon = 0.8
 
     # Optimizer
     opt = Adam(learning_rate=learning_rate)
@@ -85,9 +87,26 @@ def train():
 
             curr_state = get_state(game)
 
-            curr_state_tf = tf.convert_to_tensor(curr_state)
-            curr_state_tf = tf.expand_dims(curr_state_tf, 0)
-            q_values = agent(curr_state)
+            if epsilon > np.random.rand(1)[0]:
+                # take a random action
+                action = np.random.choice(3)
+            else:
+                curr_state_tf = tf.convert_to_tensor(curr_state)
+                curr_state_tf = tf.expand_dims(curr_state_tf, 0)
+                q_values = agent(curr_state_tf, training=False)
+                action = tf.argmax(q_values[0]).numpy()
+
+            move = [0,0,0]
+            move[action] = 1
+
+            reward, game_over, score = game.play_step(move)
+
+
+
+            epsilon -= 0.001
+            epsilon = max(epsilon, 0)
+
+
 
 
 
