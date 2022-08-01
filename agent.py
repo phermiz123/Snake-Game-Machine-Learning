@@ -1,18 +1,15 @@
-import os
 from snakeGame import SnakeGameAI, Direction, Point
 import keras
 import numpy as np
 import tensorflow as tf
 from keras import layers
-import keras.initializers as initializers
 from keras.optimizers import Adam
-from keras import  optimizers
-import matplotlib.pyplot as plt
+from plot import plot_scores
 
 
 def create_network():
     inputs = layers.Input(shape=(11,))
-    hidden = layers.Dense(units=128, activation='relu')(inputs)
+    hidden = layers.Dense(units=256, activation='relu')(inputs)
     q_layer = layers.Dense(units=3, activation='linear')(hidden)
 
     return keras.Model(inputs=inputs, outputs=q_layer)
@@ -79,10 +76,11 @@ def train():
     agent_target = create_network()
     game = SnakeGameAI()
 
-    learning_rate = 0.01
+    learning_rate = 0.001
     epsilon = 0.8
-    gamma = 0.81
-    batch_size = 10
+    gamma = 0.9
+    batch_size = 32
+    total_score = 0
 
     # Experience Replay
     action_history = []
@@ -90,7 +88,7 @@ def train():
     state_next_history = []
     rewards_history = []
     done_history = []
-    games = []
+    mean_scores = []
     game_number = 1
     scores = []
     episode_reward_history = []
@@ -120,7 +118,7 @@ def train():
                 q_values = agent(curr_state_tf, training=False)
                 action = tf.argmax(q_values[0]).numpy()
 
-            epsilon -= 0.001
+            epsilon -= 0.01
             epsilon = max(epsilon, 0)
 
             move = [0,0,0]
@@ -143,14 +141,16 @@ def train():
                 episode_reward = 0
                 game.reset()
 
+                print('Game number:', game_number, 'Score: ', score, 'Record: ', record)
+
+                scores.append(score)
+                total_score += score
+                mean_scores.append(total_score / game_number)
+                game_number += 1
+                plot_scores(scores, mean_scores)
+
                 if score > record:
                     record = score
-                    scores.append(score)
-                    games.append(game_number)
-                    game_number += 1
-                    plt.plot(games, scores)
-                    plt.show()
-
 
 
             if len(done_history) > batch_size:
